@@ -5,21 +5,10 @@ import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart' as xml;
 import 'package:cached_network_image/cached_network_image.dart';
 
-//создадим распарсиватель
-Future<String> fetchPhoto() async{
-  final response = await http.get('https://www.flickr.com/services/rest/?method=flickr.photos.getRecent&api_key=26735e19238420ad886787ff3db6b7c5');
-  if (response.statusCode == 200) {
-    // Если отвечает код двести, то парсим
-    return response.body;
-  } else {
-    throw Exception('Невозможно запарсить xml');
-  }
-}
-
 void main() => runApp(MyApp());
 var temp; //xml фаел
 int i = 0;
-
+final List<String> queries = new List();
 class MyStatefulWidget extends StatefulWidget {
   MyStatefulWidget({Key key}) : super(key: key);
 
@@ -60,19 +49,23 @@ Widget build(BuildContext context) {
               each.getAttribute('server')).toList();
           var secrets = temp.findAllElements('photo').map((each) =>
               each.getAttribute('secret')).toList();
-          while (i < ids.length) {
-            i++;
-            return Center(child: Image.network(
-                'https://farm' + farms[i - 1] + '.staticflickr.com/' +
-                    servers[i - 1] + '/' + ids[i - 1] + '_' + secrets[i - 1] +
-                    '.jpg'),
+            return GridView.count(
+                primary: true,
+                padding: const EdgeInsets.all(10),
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                crossAxisCount: 2,
+                children: List.generate(100, (index){
+                  return CachedNetworkImage(
+                    placeholder: (context, url) => CircularProgressIndicator(),
+                    imageUrl: 'https://farm' + farms[index] + '.staticflickr.com/' +
+                      servers[index] + '/' + ids[index] + '_' + secrets[index] +
+                      '.jpg',
+                  );
+                })
             );
-          }
-        } else if (snapshot.hasError) {
-          return Text("${snapshot.error}");
         }
-        return CircularProgressIndicator();
-        // By default, show a loading spinner.
+        return Text("${snapshot.error}");
       }
   );
 }
@@ -93,16 +86,7 @@ class MyApp extends StatelessWidget {
         appBar: AppBar(
           title: Text('Flicr Fetcher'),
         ),
-        body: GridView.count(
-          primary: true,
-          padding: const EdgeInsets.all(10),
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          crossAxisCount: 2,
-          children: List.generate(100, (index){
-            return MyStatefulWidget();
-          })
-          ),
+        body: MyStatefulWidget(),
         ),
       );
   }
