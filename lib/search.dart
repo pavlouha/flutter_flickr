@@ -20,7 +20,7 @@ class SearchState extends State<Search> {
   SearchState(this.question);
   Future<String> findAnswer() async {
     final response = await http.get(
-        'https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=26735e19238420ad886787ff3db6b7c5&text='+question);
+        'https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=26735e19238420ad886787ff3db6b7c5&text='+question + '&per_page=500');
     if (response.statusCode == 200) {
       // Если отвечает код двести, то парсим
       return response.body;

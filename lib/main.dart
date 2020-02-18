@@ -8,14 +8,19 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
 import 'package:share/share.dart';
 import 'search.dart';
+import 'sql.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  init();
   runApp(MyApp());
 }
   var temp; //xml фаел
 var founded; //xml с результатами поиска
   int pages = 1;
 var searchTerm;
+List<Future> photos = new List(500);
+var conH;
 
 class MyStatefulWidget extends StatefulWidget {
   MyStatefulWidget({Key key}) : super(key: key);
@@ -27,7 +32,7 @@ class MyStatefulWidget extends StatefulWidget {
 class _MyStatefulWidgetState extends State<MyStatefulWidget> {
   Future<String> fetchPhoto(page) async {
     final response = await http.get(
-        'https://www.flickr.com/services/rest/?method=flickr.photos.getRecent&api_key=26735e19238420ad886787ff3db6b7c5&page=' + page.toString());
+        'https://www.flickr.com/services/rest/?method=flickr.photos.getRecent&api_key=26735e19238420ad886787ff3db6b7c5&per_page=500');
     if (response.statusCode == 200) {
       // Если отвечает код двести, то парсим
       return response.body;
@@ -46,7 +51,6 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
 Widget build(BuildContext context) {
   return searcher(checker);
   }
-
  }
 
 FutureBuilder searcher(checker) {
@@ -103,9 +107,36 @@ FutureBuilder searcher(checker) {
   );
 }
 
-class WebViewPage extends StatelessWidget {
+class WebViewPage extends StatefulWidget {
   final String owner, id, title;
   WebViewPage(this.owner, this.id, this.title);
+  @override
+  WebViewPageState createState() => WebViewPageState(owner, id, title);
+}
+
+class WebViewPageState extends State<WebViewPage> {
+  final String owner, id, title;
+
+  WebViewPageState(this.owner, this.id, this.title);
+
+  // Defining a variable for storing click state
+  bool isPressed = false;
+
+  // Click function for changing the state on click
+  _pressed() {
+    var newVal = true;
+    if(isPressed) {
+      newVal = false;
+    } else {
+      newVal = true;
+    }
+
+    // This function is required for changing the state.
+    // Whenever this function is called it refresh the page with new value
+    setState((){
+      isPressed = newVal;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,12 +148,23 @@ class WebViewPage extends StatelessWidget {
             actions: <Widget>[
               IconButton(
                 icon: Icon(Icons.arrow_back), tooltip: 'Previous page',
-                onPressed: () { Navigator.pop(context);},
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+              IconButton(
+                  icon: new Icon(isPressed ? Icons.favorite:Icons.favorite_border),
+                  color: Colors.red,
+                  onPressed: () {
+                    _pressed();
+                      save(int.parse(id), owner, title);
+                  },
               ),
               IconButton(
                 icon: Icon(Icons.share), tooltip: 'Share via',
-                onPressed: ()  {
-Share.share("Check out what I've found in Flickr! " + 'https://www.flickr.com/photos/' + owner + '/' + id);
+                onPressed: () {
+                  Share.share("Check out what I've found in Flickr! " +
+                      'https://www.flickr.com/photos/' + owner + '/' + id);
                 },
               )
             ],
@@ -153,6 +195,7 @@ class HomeScr extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    conH = context;
     return new Scaffold(
       extendBodyBehindAppBar: true,
       drawer: showDrawer(),
@@ -171,6 +214,12 @@ class HomeScr extends StatelessWidget {
       MyStatefulWidget(),
     );
   }
+}
+
+void startFavs() {
+  Navigator.push(
+      conH,
+      MaterialPageRoute(builder: (context) => Favorites()) );
 }
 
 Widget showDrawer() {
@@ -206,7 +255,7 @@ Widget showDrawer() {
         ),
         ListTile(
           title: Text('Favourites'),
-          onTap: () => debugPrint(''),
+          onTap: startFavs,
         ),
         ListTile(
           title: Text('About'),
@@ -260,7 +309,7 @@ class SearchWidgetState extends State<SearchWidget> {
               shape: new RoundedRectangleBorder(borderRadius: new BorderRadius.circular(20)),
               child: Text('Search'))
         ],
-      ) 
+      ),
     );
     }
   );
@@ -286,6 +335,5 @@ class SearchWidgetState extends State<SearchWidget> {
         MaterialPageRoute(builder: (context) => Search(searchTerm)),
       );
     }
-
   }
 }
